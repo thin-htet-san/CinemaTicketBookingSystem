@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="CinemaTicketBookingSystem/CinemaTicketBookingSystem.WebApi.csproj" />
+  <Project Path="Database/CinemaTicketBookingSystem.Database.csproj" />
+</Solution>

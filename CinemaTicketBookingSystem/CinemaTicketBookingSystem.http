@@ -1,0 +1,6 @@
+@CinemaTicketBookingSystem_HostAddress = http://localhost:5263
+
+GET {{CinemaTicketBookingSystem_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
