@@ -1,6 +1,19 @@
+using CinemaTicketBookingSystem.Database.AppDbContextModels;
+using CinemaTicketBookingSystem.WebApi.Services;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection") 
+        ?? "Server=.;Database=CinemaTicketBookingSystem;User ID=sa;Password=sasa@123;TrustServerCertificate=True;"));
+
+builder.Services.AddScoped<IMovieService, MovieService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IShowtimeService, ShowtimeService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
