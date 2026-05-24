@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Database.AppDbContextModels;
+namespace CinemaTicketBookingSystem.Database.AppDbContextModels;
 
 public partial class User
 {

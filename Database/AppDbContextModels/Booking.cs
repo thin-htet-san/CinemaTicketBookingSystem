@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Database.AppDbContextModels;
+namespace CinemaTicketBookingSystem.Database.AppDbContextModels;
 
 public partial class Booking
 {
@@ -14,6 +14,8 @@ public partial class Booking
     public DateTime? BookingTime { get; set; }
 
     public decimal TotalAmount { get; set; }
+
+    public string BookingStatus { get; set; } = null!;
 
     public virtual ICollection<BookingSeat> BookingSeats { get; set; } = new List<BookingSeat>();
 

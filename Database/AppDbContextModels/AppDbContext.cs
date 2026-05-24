@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
-namespace Database.AppDbContextModels;
+namespace CinemaTicketBookingSystem.Database.AppDbContextModels;
 
 public partial class AppDbContext : DbContext
 {
@@ -27,7 +27,7 @@ public partial class AppDbContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=.;Database=CinemaTicketBookingSystem;User Id=sa;Password=sasa@123;TrustServerCertificate=True;");
+        => optionsBuilder.UseSqlServer("Server=.;Database=CinemaTicketBookingSystem;User ID=sa;Password=sasa@123;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -35,6 +35,9 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.BookingId).HasName("PK__Bookings__73951AEDFDA09491");
 
+            entity.Property(e => e.BookingStatus)
+                .HasMaxLength(20)
+                .HasDefaultValue("Confirmed");
             entity.Property(e => e.BookingTime).HasDefaultValueSql("(sysutcdatetime())");
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(18, 2)");
 
@@ -89,9 +92,13 @@ public partial class AppDbContext : DbContext
         {
             entity.HasKey(e => e.UserId).HasName("PK__Users__1788CC4C51C7843C");
 
-            entity.HasIndex(e => e.Email, "UQ_Users_Email").IsUnique();
+            entity.HasIndex(e => e.Email, "UQ_Users_Email_Not_Null")
+                .IsUnique()
+                .HasFilter("([Email] IS NOT NULL)");
 
-            entity.HasIndex(e => e.PhoneNumber, "UQ_Users_Phone").IsUnique();
+            entity.HasIndex(e => e.PhoneNumber, "UQ_Users_Phone_Not_Null")
+                .IsUnique()
+                .HasFilter("([PhoneNumber] IS NOT NULL)");
 
             entity.Property(e => e.Email).HasMaxLength(100);
             entity.Property(e => e.FullName).HasMaxLength(100);

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Database.AppDbContextModels;
+namespace CinemaTicketBookingSystem.Database.AppDbContextModels;
 
 public partial class Movie
 {
@@ -12,6 +12,8 @@ public partial class Movie
     public int DurationMinutes { get; set; }
 
     public string Genre { get; set; } = null!;
+
+    public bool IsDeleted { get; set; }
 
     public virtual ICollection<Showtime> Showtimes { get; set; } = new List<Showtime>();
 }
