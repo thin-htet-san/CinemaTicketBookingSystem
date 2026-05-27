@@ -16,7 +16,7 @@ public class TheaterHallService : ITheaterHallService
     {
         _dbContext = dbContext;
     }
-
+    // Get all theater halls 
     public async Task<IEnumerable<TheaterHallResponseDto>> GetAllAsync(bool includeDeleted = false)
     {
         IQueryable<TheaterHall> query = _dbContext.TheaterHalls.Include(x => x.CinemaBranch);
@@ -29,6 +29,7 @@ public class TheaterHallService : ITheaterHallService
         return halls.Select(MapToResponseDto);
     }
 
+    //Get Theater Hall by Id
     public async Task<TheaterHallResponseDto?> GetByIdAsync(int id)
     {
         var hall = await _dbContext.TheaterHalls
@@ -38,6 +39,7 @@ public class TheaterHallService : ITheaterHallService
         return hall == null ? null : MapToResponseDto(hall);
     }
 
+    // Create a new theater hall
     public async Task<TheaterHallResponseDto> CreateAsync(CreateTheaterHallDto dto)
     {
         await ValidateCinemaBranchAsync(dto.CinemaBranchId);
@@ -61,6 +63,7 @@ public class TheaterHallService : ITheaterHallService
         return MapToResponseDto(hall);
     }
 
+    // Update theater hall
     public async Task<TheaterHallResponseDto?> UpdateAsync(int id, UpdateTheaterHallDto dto)
     {
         var hall = await _dbContext.TheaterHalls
@@ -88,6 +91,7 @@ public class TheaterHallService : ITheaterHallService
         return MapToResponseDto(hall);
     }
 
+    // Soft delete theater hall
     public async Task<bool> DeleteAsync(int id)
     {
         var hall = await _dbContext.TheaterHalls.FirstOrDefaultAsync(x => x.TheaterHallId == id && !x.IsDeleted);
@@ -102,6 +106,7 @@ public class TheaterHallService : ITheaterHallService
         return true;
     }
 
+    
     private async Task ValidateCinemaBranchAsync(int cinemaBranchId)
     {
         var exists = await _dbContext.CinemaBranches.AnyAsync(x => x.CinemaBranchId == cinemaBranchId && !x.IsDeleted);
