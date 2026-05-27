@@ -19,6 +19,7 @@ public class BookingService : IBookingService
         _dbContext = dbContext;
     }
 
+    // Create a new booking
     public async Task<BookingReceiptDto> CreateBookingAsync(CreateBookingDto dto)
     {
         using var transaction = await _dbContext.Database.BeginTransactionAsync();
@@ -38,6 +39,10 @@ public class BookingService : IBookingService
             if (showtime == null)
             {
                 throw new KeyNotFoundException($"Showtime with ID {dto.ShowtimeId} does not exist or has been deleted.");
+            }
+            if (showtime.StartTime < DateTime.Now)
+            {
+                throw new InvalidOperationException($"Cannot book tickets. This showtime has already passed (Scheduled: {showtime.StartTime}).");
             }
 
             var hall = showtime.TheaterHallNavigation;
@@ -141,6 +146,7 @@ public class BookingService : IBookingService
         }
     }
 
+    // Update booking status (e.g., Cancelled)
     public async Task<BookingReceiptDto?> UpdateBookingStatusAsync(int bookingId, string bookingStatus)
     {
         var booking = await _dbContext.Bookings
@@ -170,6 +176,7 @@ public class BookingService : IBookingService
         return MapToReceiptDto(booking);
     }
 
+    // Retrieve bookings
     public async Task<IEnumerable<BookingReceiptDto>> GetAllBookingsAsync()
     {
         var bookings = await _dbContext.Bookings
@@ -203,6 +210,7 @@ public class BookingService : IBookingService
         return MapToReceiptDto(booking);
     }
 
+    // Retrieve bookings by user ID
     public async Task<IEnumerable<BookingReceiptDto>> GetBookingsByUserIdAsync(int userId)
     {
         var bookings = await _dbContext.Bookings
@@ -218,6 +226,8 @@ public class BookingService : IBookingService
         return bookings.Select(MapToReceiptDto);
     }
 
+
+    // Retrieve booked seats for a specific booking
     public async Task<IEnumerable<string>> GetSeatsForBookingAsync(int bookingId)
     {
         return await _dbContext.BookingSeats
@@ -226,6 +236,7 @@ public class BookingService : IBookingService
             .ToListAsync();
     }
 
+    
     private static BookingReceiptDto MapToReceiptDto(Booking booking)
     {
         return new BookingReceiptDto

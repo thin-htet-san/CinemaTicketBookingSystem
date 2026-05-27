@@ -18,6 +18,7 @@ public class ShowtimeService : IShowtimeService
         _dbContext = dbContext;
     }
 
+    // Get all showtimes   
     public async Task<IEnumerable<ShowtimeResponseDto>> GetShowtimesAsync(int? movieId = null)
     {
         IQueryable<Showtime> query = _dbContext.Showtimes
@@ -34,6 +35,7 @@ public class ShowtimeService : IShowtimeService
         return showtimes.Select(MapToResponseDto);
     }
 
+    // Get showtime by ID
     public async Task<ShowtimeResponseDto?> GetShowtimeByIdAsync(int id)
     {
         var showtime = await _dbContext.Showtimes
@@ -44,6 +46,7 @@ public class ShowtimeService : IShowtimeService
         return showtime == null ? null : MapToResponseDto(showtime);
     }
 
+    // Create a new showtime
     public async Task<ShowtimeResponseDto> CreateShowtimeAsync(CreateShowtimeDto dto)
     {
         var movie = await _dbContext.Movies.FirstOrDefaultAsync(m => m.MovieId == dto.MovieId && !m.IsDeleted);
@@ -76,6 +79,7 @@ public class ShowtimeService : IShowtimeService
         return MapToResponseDto(showtime);
     }
 
+    // Update showtime
     public async Task<ShowtimeResponseDto?> UpdateShowtimeAsync(int id, CreateShowtimeDto dto)
     {
         var showtime = await _dbContext.Showtimes
@@ -112,6 +116,7 @@ public class ShowtimeService : IShowtimeService
         return MapToResponseDto(showtime);
     }
 
+    // Partial update showtime
     public async Task<ShowtimeResponseDto?> UpdateShowtimePatchAsync(int id, PatchShowtimeDto dto)
     {
         var showtime = await _dbContext.Showtimes
@@ -177,6 +182,7 @@ public class ShowtimeService : IShowtimeService
         return MapToResponseDto(showtime);
     }
 
+    // Soft delete showtime
     public async Task<bool> DeleteShowtimeAsync(int id)
     {
         var showtime = await _dbContext.Showtimes.FirstOrDefaultAsync(s => s.ShowtimeId == id && !s.IsDeleted);
@@ -191,6 +197,7 @@ public class ShowtimeService : IShowtimeService
         return true;
     }
 
+    // Get seat availability for a showtime
     public async Task<IEnumerable<SeatStatusDto>> GetSeatsForShowtimeAsync(int showtimeId)
     {
         var showtime = await _dbContext.Showtimes
