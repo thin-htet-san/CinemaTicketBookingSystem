@@ -114,17 +114,22 @@ public class BookingsController : ControllerBase
         }
     }
 
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> Cancel(int id)
+    [HttpPatch("{id}/status")]
+    public async Task<ActionResult<BookingReceiptDto>> PatchStatus(int id, [FromBody] PatchBookingStatusDto dto)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         try
         {
-            var cancelled = await _bookingService.CancelBookingAsync(id);
-            if (!cancelled)
+            var booking = await _bookingService.UpdateBookingStatusAsync(id, dto.BookingStatus!);
+            if (booking == null)
             {
                 return NotFound(new { message = $"Booking with ID {id} was not found." });
             }
-            return NoContent();
+            return Ok(booking);
         }
         catch (Exception ex)
         {

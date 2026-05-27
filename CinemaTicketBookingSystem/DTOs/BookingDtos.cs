@@ -31,3 +31,19 @@ public class BookingReceiptDto
     public string BookingStatus { get; set; } = null!;
     public List<string> SeatNumbers { get; set; } = new();
 }
+
+public class PatchBookingStatusDto : IValidatableObject
+{
+    [StringLength(20)]
+    public string? BookingStatus { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.IsNullOrWhiteSpace(BookingStatus))
+        {
+            yield return new ValidationResult(
+                "BookingStatus is required.",
+                new[] { nameof(BookingStatus) });
+        }
+    }
+}

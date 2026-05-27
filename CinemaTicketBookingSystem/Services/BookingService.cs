@@ -115,27 +115,32 @@ public class BookingService : IBookingService
     }
 
 
-    //booking cancel 
-    public async Task<bool> CancelBookingAsync(int bookingId)
+    //booking patch status
+    public async Task<BookingReceiptDto?> UpdateBookingStatusAsync(int bookingId, string bookingStatus)
     {
         var booking = await _dbContext.Bookings
             .Include(b => b.BookingSeats)
+            .Include(b => b.User)
+            .Include(b => b.Showtime)
+                .ThenInclude(s => s!.Movie)
             .FirstOrDefaultAsync(b => b.BookingId == bookingId);
 
         if (booking == null)
         {
-            return false;
+            return null;
         }
-        
-        booking.BookingStatus = "Cancelled";
 
-        if (booking.BookingSeats.Any())
+        var normalizedStatus = bookingStatus.Trim();
+        booking.BookingStatus = normalizedStatus;
+
+        if (normalizedStatus.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) &&
+            booking.BookingSeats.Any())
         {
             _dbContext.BookingSeats.RemoveRange(booking.BookingSeats);
         }
 
         await _dbContext.SaveChangesAsync();
-        return true;
+        return MapToReceiptDto(booking);
     }
 
 

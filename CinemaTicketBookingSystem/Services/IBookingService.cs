@@ -7,7 +7,7 @@ namespace CinemaTicketBookingSystem.WebApi.Services;
 public interface IBookingService
 {
     Task<BookingReceiptDto> CreateBookingAsync(CreateBookingDto dto);
-    Task<bool> CancelBookingAsync(int bookingId);
+    Task<BookingReceiptDto?> UpdateBookingStatusAsync(int bookingId, string bookingStatus);
     Task<IEnumerable<BookingReceiptDto>> GetAllBookingsAsync();
     Task<BookingReceiptDto?> GetBookingByIdAsync(int id);
     Task<IEnumerable<BookingReceiptDto>> GetBookingsByUserIdAsync(int userId);
