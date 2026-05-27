@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using CinemaTicketBookingSystem.Database.AppDbContextModels;
@@ -17,7 +19,6 @@ public class BookingService : IBookingService
         _dbContext = dbContext;
     }
 
-    //booking create 
     public async Task<BookingReceiptDto> CreateBookingAsync(CreateBookingDto dto)
     {
         using var transaction = await _dbContext.Database.BeginTransactionAsync();
@@ -32,10 +33,51 @@ public class BookingService : IBookingService
 
             var showtime = await _dbContext.Showtimes
                 .Include(s => s.Movie)
+                .Include(s => s.TheaterHallNavigation)
                 .FirstOrDefaultAsync(s => s.ShowtimeId == dto.ShowtimeId && !s.IsDeleted);
             if (showtime == null)
             {
                 throw new KeyNotFoundException($"Showtime with ID {dto.ShowtimeId} does not exist or has been deleted.");
+            }
+
+            var hall = showtime.TheaterHallNavigation;
+            if (hall == null || hall.IsDeleted)
+            {
+                throw new KeyNotFoundException($"TheaterHall for Showtime ID {dto.ShowtimeId} does not exist or has been deleted.");
+            }
+
+            var normalizedSeatNumbers = new List<string>();
+            var duplicateSeatSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            decimal totalAmount = 0;
+
+            foreach (var rawSeatNumber in dto.SeatNumbers)
+            {
+                var normalizedSeat = NormalizeSeatNumber(rawSeatNumber);
+                if (!duplicateSeatSet.Add(normalizedSeat))
+                {
+                    throw new InvalidOperationException($"Duplicate seat in request: {normalizedSeat}.");
+                }
+
+                if (!TryParseSeatNumber(normalizedSeat, out var rowLabel, out var seatIndex))
+                {
+                    throw new InvalidOperationException($"Invalid seat format: {rawSeatNumber}. Use format like A-1.");
+                }
+
+                var rowIndex = GetRowIndexFromLabel(rowLabel);
+                if (rowIndex < 0 || rowIndex >= hall.TotalRows)
+                {
+                    throw new InvalidOperationException($"Seat {normalizedSeat} is outside the hall row range.");
+                }
+
+                var isCoupleRow = rowIndex >= hall.CoupleSeatStartRow;
+                var maxSeatsInRow = isCoupleRow ? hall.SeatsPerRow / 2 : hall.SeatsPerRow;
+                if (seatIndex < 1 || seatIndex > maxSeatsInRow)
+                {
+                    throw new InvalidOperationException($"Seat {normalizedSeat} is outside the seat range for row {rowLabel}.");
+                }
+
+                totalAmount += isCoupleRow ? showtime.BasePrice * 2 : showtime.BasePrice;
+                normalizedSeatNumbers.Add(normalizedSeat);
             }
 
             var alreadyBookedSeats = await _dbContext.BookingSeats
@@ -43,24 +85,13 @@ public class BookingService : IBookingService
                 .Select(bs => bs.SeatNumber)
                 .ToListAsync();
 
-            var takenSeats = dto.SeatNumbers
+            var takenSeats = normalizedSeatNumbers
                 .Intersect(alreadyBookedSeats, StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
             if (takenSeats.Any())
             {
                 throw new InvalidOperationException($"The following seat(s) are already booked: {string.Join(", ", takenSeats)}.");
-            }
-
-            decimal totalAmount = 0;
-            foreach (var seat in dto.SeatNumbers)
-            {
-                if (string.IsNullOrWhiteSpace(seat)) continue;
-                char row = char.ToUpper(seat[0]);
-
-                if (row == 'F' || row == 'G') totalAmount += showtime.BasePrice * 2;
-                else if (row == 'D' || row == 'E') totalAmount += showtime.BasePrice + 5.00m;
-                else totalAmount += showtime.BasePrice;
             }
 
             var booking = new Booking
@@ -73,24 +104,21 @@ public class BookingService : IBookingService
             };
 
             _dbContext.Bookings.Add(booking);
-            await _dbContext.SaveChangesAsync(); 
+            await _dbContext.SaveChangesAsync();
 
-            foreach (var seatNumber in dto.SeatNumbers)
+            foreach (var seatNumber in normalizedSeatNumbers)
             {
-                var bookingSeat = new BookingSeat
+                _dbContext.BookingSeats.Add(new BookingSeat
                 {
                     ShowtimeId = dto.ShowtimeId,
                     SeatNumber = seatNumber,
                     BookingId = booking.BookingId
-                };
-                _dbContext.BookingSeats.Add(bookingSeat);
+                });
             }
-            await _dbContext.SaveChangesAsync();
 
-            
+            await _dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            
             return new BookingReceiptDto
             {
                 BookingId = booking.BookingId,
@@ -99,23 +127,20 @@ public class BookingService : IBookingService
                 ShowtimeId = showtime.ShowtimeId,
                 MovieTitle = showtime.Movie?.Title ?? "Unknown Movie",
                 StartTime = showtime.StartTime,
-                TheaterHall = showtime.TheaterHall,
+                TheaterHall = showtime.TheaterHallNavigation?.Name ?? "Unknown Hall",
                 BookingTime = booking.BookingTime ?? DateTime.UtcNow,
                 TotalAmount = booking.TotalAmount,
                 BookingStatus = booking.BookingStatus,
-                SeatNumbers = dto.SeatNumbers
+                SeatNumbers = normalizedSeatNumbers
             };
         }
         catch (Exception)
         {
-            
             await transaction.RollbackAsync();
             throw;
         }
     }
 
-
-    //booking patch status
     public async Task<BookingReceiptDto?> UpdateBookingStatusAsync(int bookingId, string bookingStatus)
     {
         var booking = await _dbContext.Bookings
@@ -123,6 +148,8 @@ public class BookingService : IBookingService
             .Include(b => b.User)
             .Include(b => b.Showtime)
                 .ThenInclude(s => s!.Movie)
+            .Include(b => b.Showtime)
+                .ThenInclude(s => s!.TheaterHallNavigation)
             .FirstOrDefaultAsync(b => b.BookingId == bookingId);
 
         if (booking == null)
@@ -143,28 +170,28 @@ public class BookingService : IBookingService
         return MapToReceiptDto(booking);
     }
 
-
-    //booking get all
     public async Task<IEnumerable<BookingReceiptDto>> GetAllBookingsAsync()
     {
         var bookings = await _dbContext.Bookings
             .Include(b => b.User)
             .Include(b => b.Showtime)
                 .ThenInclude(s => s!.Movie)
+            .Include(b => b.Showtime)
+                .ThenInclude(s => s!.TheaterHallNavigation)
             .Include(b => b.BookingSeats)
             .ToListAsync();
 
         return bookings.Select(MapToReceiptDto);
     }
 
-
-    //booking get by id
     public async Task<BookingReceiptDto?> GetBookingByIdAsync(int id)
     {
         var booking = await _dbContext.Bookings
             .Include(b => b.User)
             .Include(b => b.Showtime)
                 .ThenInclude(s => s!.Movie)
+            .Include(b => b.Showtime)
+                .ThenInclude(s => s!.TheaterHallNavigation)
             .Include(b => b.BookingSeats)
             .FirstOrDefaultAsync(b => b.BookingId == id);
 
@@ -176,14 +203,14 @@ public class BookingService : IBookingService
         return MapToReceiptDto(booking);
     }
 
-
-    //booking get by user id
     public async Task<IEnumerable<BookingReceiptDto>> GetBookingsByUserIdAsync(int userId)
     {
         var bookings = await _dbContext.Bookings
             .Include(b => b.User)
             .Include(b => b.Showtime)
                 .ThenInclude(s => s!.Movie)
+            .Include(b => b.Showtime)
+                .ThenInclude(s => s!.TheaterHallNavigation)
             .Include(b => b.BookingSeats)
             .Where(b => b.UserId == userId)
             .ToListAsync();
@@ -191,8 +218,6 @@ public class BookingService : IBookingService
         return bookings.Select(MapToReceiptDto);
     }
 
-
-    //get seats for booking
     public async Task<IEnumerable<string>> GetSeatsForBookingAsync(int bookingId)
     {
         return await _dbContext.BookingSeats
@@ -200,7 +225,6 @@ public class BookingService : IBookingService
             .Select(bs => bs.SeatNumber)
             .ToListAsync();
     }
-
 
     private static BookingReceiptDto MapToReceiptDto(Booking booking)
     {
@@ -212,11 +236,67 @@ public class BookingService : IBookingService
             ShowtimeId = booking.ShowtimeId ?? 0,
             MovieTitle = booking.Showtime?.Movie?.Title ?? "Unknown Movie",
             StartTime = booking.Showtime?.StartTime ?? DateTime.MinValue,
-            TheaterHall = booking.Showtime?.TheaterHall ?? "Unknown Hall",
+            TheaterHall = booking.Showtime?.TheaterHallNavigation?.Name ?? "Unknown Hall",
             BookingTime = booking.BookingTime ?? DateTime.UtcNow,
             TotalAmount = booking.TotalAmount,
             BookingStatus = booking.BookingStatus,
             SeatNumbers = booking.BookingSeats.Select(bs => bs.SeatNumber).ToList()
         };
+    }
+
+    private static string NormalizeSeatNumber(string seatNumber)
+    {
+        if (string.IsNullOrWhiteSpace(seatNumber))
+        {
+            throw new InvalidOperationException("Seat number cannot be empty.");
+        }
+
+        var trimmed = seatNumber.Trim().ToUpperInvariant();
+        if (!TryParseSeatNumber(trimmed, out var rowLabel, out var seatIndex))
+        {
+            throw new InvalidOperationException($"Invalid seat format: {seatNumber}. Use format like A-1.");
+        }
+
+        return $"{rowLabel}-{seatIndex}";
+    }
+
+    private static bool TryParseSeatNumber(string seatNumber, out string rowLabel, out int seatIndex)
+    {
+        rowLabel = string.Empty;
+        seatIndex = 0;
+
+        var parts = seatNumber.Split('-', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        var parsedRow = parts[0].Trim().ToUpperInvariant();
+        if (parsedRow.Length == 0 || !parsedRow.All(char.IsLetter))
+        {
+            return false;
+        }
+
+        if (!int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var parsedSeat) || parsedSeat <= 0)
+        {
+            return false;
+        }
+
+        rowLabel = parsedRow;
+        seatIndex = parsedSeat;
+        return true;
+    }
+
+    private static int GetRowIndexFromLabel(string rowLabel)
+    {
+        var label = rowLabel.ToUpperInvariant();
+        var index = 0;
+
+        foreach (var ch in label)
+        {
+            index = (index * 26) + (ch - 'A' + 1);
+        }
+
+        return index - 1;
     }
 }

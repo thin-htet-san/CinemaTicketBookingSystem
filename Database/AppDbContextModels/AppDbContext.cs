@@ -19,15 +19,19 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<BookingSeat> BookingSeats { get; set; }
 
+    public virtual DbSet<CinemaBranch> CinemaBranches { get; set; }
+
     public virtual DbSet<Movie> Movies { get; set; }
 
     public virtual DbSet<Showtime> Showtimes { get; set; }
+
+    public virtual DbSet<TheaterHall> TheaterHalls { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Server=.;Database=CinemaTicketBookingSystem;User ID=sa;Password=sasa@123;TrustServerCertificate=True;");
+        => optionsBuilder.UseSqlServer("Server=.;Database=CinemaTicketBookingSystem;User Id=sa;Password=sasa@123;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -67,6 +71,12 @@ public partial class AppDbContext : DbContext
                 .HasConstraintName("FK__BookingSe__Showt__45F365D3");
         });
 
+        modelBuilder.Entity<CinemaBranch>(entity =>
+        {
+            entity.Property(e => e.Location).HasMaxLength(255);
+            entity.Property(e => e.Name).HasMaxLength(150);
+        });
+
         modelBuilder.Entity<Movie>(entity =>
         {
             entity.HasKey(e => e.MovieId).HasName("PK__Movies__4BD2941A0C263840");
@@ -80,12 +90,24 @@ public partial class AppDbContext : DbContext
             entity.HasKey(e => e.ShowtimeId).HasName("PK__Showtime__32D31F20C8425187");
 
             entity.Property(e => e.BasePrice).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.TheaterHall).HasMaxLength(50);
 
             entity.HasOne(d => d.Movie).WithMany(p => p.Showtimes)
                 .HasForeignKey(d => d.MovieId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK__Showtimes__Movie__398D8EEE");
+
+            entity.HasOne(d => d.TheaterHallNavigation).WithMany(p => p.Showtimes)
+                .HasForeignKey(d => d.TheaterHallId)
+                .HasConstraintName("FK_Showtimes_TheaterHalls");
+        });
+
+        modelBuilder.Entity<TheaterHall>(entity =>
+        {
+            entity.Property(e => e.Name).HasMaxLength(100);
+
+            entity.HasOne(d => d.CinemaBranch).WithMany(p => p.TheaterHalls)
+                .HasForeignKey(d => d.CinemaBranchId)
+                .HasConstraintName("FK_TheaterHalls_CinemaBranches");
         });
 
         modelBuilder.Entity<User>(entity =>

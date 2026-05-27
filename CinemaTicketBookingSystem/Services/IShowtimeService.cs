@@ -10,8 +10,7 @@ public interface IShowtimeService
     Task<ShowtimeResponseDto?> GetShowtimeByIdAsync(int id);
     Task<ShowtimeResponseDto> CreateShowtimeAsync(CreateShowtimeDto dto);
     Task<ShowtimeResponseDto?> UpdateShowtimeAsync(int id, CreateShowtimeDto dto);
-
-    Task<ShowtimeResponseDto> UpdateShowtimePatchAsync(int id, PatchShowtimeDto dto);
+    Task<ShowtimeResponseDto?> UpdateShowtimePatchAsync(int id, PatchShowtimeDto dto);
     Task<bool> DeleteShowtimeAsync(int id);
     Task<IEnumerable<SeatStatusDto>> GetSeatsForShowtimeAsync(int showtimeId);
 }
