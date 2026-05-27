@@ -8,7 +8,7 @@ using CinemaTicketBookingSystem.WebApi.Services;
 namespace CinemaTicketBookingSystem.WebApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/showtime")]
 public class ShowtimesController : ControllerBase
 {
     private readonly IShowtimeService _showtimeService;
@@ -50,7 +50,7 @@ public class ShowtimesController : ControllerBase
         }
     }
 
-    [HttpGet("{id}/seats")]
+    [HttpGet("{id}/seat")]
     public async Task<ActionResult<IEnumerable<SeatStatusDto>>> GetSeats(int id)
     {
         try

@@ -13,5 +13,7 @@ public partial class User
 
     public string? PhoneNumber { get; set; }
 
+    public bool IsDeleted { get; set; }
+
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }

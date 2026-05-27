@@ -8,7 +8,7 @@ using CinemaTicketBookingSystem.WebApi.Services;
 namespace CinemaTicketBookingSystem.WebApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/booking")]
 public class BookingsController : ControllerBase
 {
     private readonly IBookingService _bookingService;
@@ -64,7 +64,7 @@ public class BookingsController : ControllerBase
         }
     }
 
-    [HttpGet("{id}/seats")]
+    [HttpGet("{id}/seat")]
     public async Task<ActionResult<IEnumerable<string>>> GetSeats(int id)
     {
         try

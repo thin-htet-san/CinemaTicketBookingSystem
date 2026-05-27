@@ -8,7 +8,7 @@ using CinemaTicketBookingSystem.WebApi.Services;
 namespace CinemaTicketBookingSystem.WebApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/movie")]
 public class MoviesController : ControllerBase
 {
     private readonly IMovieService _movieService;
@@ -85,6 +85,33 @@ public class MoviesController : ControllerBase
                 return NotFound(new { message = $"Movie with ID {id} was not found or has been deleted." });
             }
             return Ok(movie);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPatch("{id}")]
+    public async Task<ActionResult<MovieResponseDto>> Patch(int id, [FromBody] PatchMovieDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            var movie = await _movieService.PatchMovieAsync(id, dto);
+            if (movie == null)
+            {
+                return NotFound(new { message = $"Movie with ID {id} was not found or has been deleted." });
+            }
+            return Ok(movie);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (Exception ex)
         {

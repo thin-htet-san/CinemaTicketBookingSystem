@@ -17,9 +17,13 @@ public class UserService : IUserService
         _dbContext = dbContext;
     }
 
+    // Get all users
     public async Task<IEnumerable<UserResponseDto>> GetAllUsersAsync()
     {
-        var users = await _dbContext.Users.ToListAsync();
+        var users = await _dbContext.Users
+                    .Where(u => !u.IsDeleted)
+                    .ToListAsync();
+
         return users.Select(MapToResponseDto);
     }
 
@@ -120,7 +124,7 @@ public class UserService : IUserService
             return null;
         }
 
-        // Apply and validate FullName if provided
+        
         if (dto.FullName != null)
         {
             if (string.IsNullOrWhiteSpace(dto.FullName))
@@ -130,17 +134,16 @@ public class UserService : IUserService
             user.FullName = dto.FullName;
         }
 
-        // Determine final email and phone after applying patch
+        
         string? newEmail = dto.Email != null ? (string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email) : user.Email;
         string? newPhone = dto.PhoneNumber != null ? (string.IsNullOrWhiteSpace(dto.PhoneNumber) ? null : dto.PhoneNumber) : user.PhoneNumber;
 
-        // Ensure business rule constraint is satisfied: at least email or phone must exist
         if (string.IsNullOrWhiteSpace(newEmail) && string.IsNullOrWhiteSpace(newPhone))
         {
             throw new InvalidOperationException("At least email or phone number must be provided.");
         }
 
-        // Check email uniqueness if email is modified and not null
+       
         if (dto.Email != null && !string.IsNullOrWhiteSpace(dto.Email) && dto.Email != user.Email)
         {
             var emailExists = await _dbContext.Users.AnyAsync(u => u.Email == dto.Email && u.UserId != id);
@@ -150,7 +153,7 @@ public class UserService : IUserService
             }
         }
 
-        // Check phone uniqueness if phone is modified and not null
+        
         if (dto.PhoneNumber != null && !string.IsNullOrWhiteSpace(dto.PhoneNumber) && dto.PhoneNumber != user.PhoneNumber)
         {
             var phoneExists = await _dbContext.Users.AnyAsync(u => u.PhoneNumber == dto.PhoneNumber && u.UserId != id);
@@ -160,7 +163,7 @@ public class UserService : IUserService
             }
         }
 
-        // Apply email and phone changes
+        
         if (dto.Email != null)
         {
             user.Email = string.IsNullOrWhiteSpace(dto.Email) ? null : dto.Email;
@@ -173,6 +176,21 @@ public class UserService : IUserService
         await _dbContext.SaveChangesAsync();
 
         return MapToResponseDto(user);
+    }
+
+    // Delete user
+    public async Task<bool> DeleteUserAsync(int id)
+    {
+        var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserId == id && !u.IsDeleted);
+
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.IsDeleted = true;
+        await _dbContext.SaveChangesAsync();
+        return true;
     }
 
 

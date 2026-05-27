@@ -15,5 +15,7 @@ public partial class Movie
 
     public bool IsDeleted { get; set; }
 
+    public string? Description { get; set; }
+
     public virtual ICollection<Showtime> Showtimes { get; set; } = new List<Showtime>();
 }

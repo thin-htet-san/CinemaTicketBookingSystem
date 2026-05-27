@@ -8,7 +8,7 @@ using CinemaTicketBookingSystem.WebApi.Services;
 namespace CinemaTicketBookingSystem.WebApi.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/user")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -127,4 +127,17 @@ public class UsersController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteUser(int id)
+    {
+        var wasDeleted = await _userService.DeleteUserAsync(id);
+        if (!wasDeleted)
+        {
+            return NotFound(new { message = $"User with ID {id} was not found or has already been deactivated." });
+        }
+
+        return Ok(new { message = "User account has been successfully deactivated." });
+    }
+
 }

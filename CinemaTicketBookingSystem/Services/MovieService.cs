@@ -50,6 +50,7 @@ public class MovieService : IMovieService
             Title = dto.Title,
             DurationMinutes = dto.DurationMinutes,
             Genre = dto.Genre,
+            Description = dto.Description,
             IsDeleted = false
         };
 
@@ -72,6 +73,50 @@ public class MovieService : IMovieService
         movie.Title = dto.Title;
         movie.DurationMinutes = dto.DurationMinutes;
         movie.Genre = dto.Genre;
+        movie.Description = dto.Description;
+
+        await _dbContext.SaveChangesAsync();
+
+        return MapToResponseDto(movie);
+    }
+
+
+    // Patch movie by id
+    public async Task<MovieResponseDto?> PatchMovieAsync(int id, PatchMovieDto dto)
+    {
+        var movie = await _dbContext.Movies.FirstOrDefaultAsync(m => m.MovieId == id);
+        if (movie == null || movie.IsDeleted)
+        {
+            return null;
+        }
+
+        if (dto.Title != null)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Title))
+            {
+                throw new InvalidOperationException("Title cannot be empty.");
+            }
+            movie.Title = dto.Title;
+        }
+
+        if (dto.DurationMinutes.HasValue)
+        {
+            movie.DurationMinutes = dto.DurationMinutes.Value;
+        }
+
+        if (dto.Genre != null)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Genre))
+            {
+                throw new InvalidOperationException("Genre cannot be empty.");
+            }
+            movie.Genre = dto.Genre;
+        }
+
+        if (dto.Description != null)
+        {
+            movie.Description = string.IsNullOrWhiteSpace(dto.Description) ? null : dto.Description;
+        }
 
         await _dbContext.SaveChangesAsync();
 
@@ -102,7 +147,8 @@ public class MovieService : IMovieService
             Title = movie.Title,
             DurationMinutes = movie.DurationMinutes,
             Genre = movie.Genre,
-            IsDeleted = movie.IsDeleted
+            IsDeleted = movie.IsDeleted,
+            Description = movie.Description
         };
     }
 }
